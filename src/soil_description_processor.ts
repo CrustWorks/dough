@@ -71,6 +71,11 @@ const granStrengthDesc = ["medium dense", "very dense", "dense", "very loose", "
 const soilCons = ["clayey", "silty", "sandy", "gravelly", "cobbly"];
 const amounts = ["very", "slightly"];
 
+/**
+ * Processes a soil description string and returns a SoilDescription object.
+ * @param bs5930desc - The soil description string.
+ * @returns A SoilDescription object.
+ */
 export function SoilDescriptionProcessor(bs5930desc: string): SoilDescription {
     const stype = GetSoilType(bs5930desc);
     const cons = getSecondarySoilType(bs5930desc);
@@ -84,6 +89,11 @@ export function SoilDescriptionProcessor(bs5930desc: string): SoilDescription {
     };
 }
 
+/**
+ * Determines the strength descriptor for a given soil description string.
+ * @param bs5930 - The soil description string.
+ * @returns A Strength object or null.
+ */
 function strengthDescHelper(bs5930: string): Strength | null {
     const behav = mapSoilBehavHelper(GetSoilType(bs5930))[0];
     switch (behav) {
@@ -91,9 +101,16 @@ function strengthDescHelper(bs5930: string): Strength | null {
             return granMap(findFirstMatch(bs5930, granStrengthDesc));
         case SoilBehaviour.COHESIVE:
             return cohesiveMap(findFirstMatch(bs5930, cohStrengthDesc));
+        default:
+            return null;
     }
 }
 
+/**
+ * Maps a cohesive strength description string to a Strength object.
+ * @param strength - The cohesive strength description string.
+ * @returns A Strength object or null.
+ */
 function cohesiveMap(strength: string | null): Strength | null {
     if (strength === null) {
         return null;
@@ -130,6 +147,11 @@ function cohesiveMap(strength: string | null): Strength | null {
     return { StrengthType: SoilBehaviour.COHESIVE, Cohesive: cohStrength };
 }
 
+/**
+ * Maps a granular strength description string to a Strength object.
+ * @param strength - The granular strength description string.
+ * @returns A Strength object or null.
+ */
 function granMap(strength: string | null): Strength | null {
     if (strength === null) {
         return null;
@@ -157,6 +179,12 @@ function granMap(strength: string | null): Strength | null {
     return { StrengthType: SoilBehaviour.GRANULAR, Granular: granStrength };
 }
 
+/**
+ * Maps a secondary constituent description string to a Constituent object.
+ * @param cons - The secondary constituent description string.
+ * @param bs5930 - The soil description string.
+ * @returns A Constituent object.
+ */
 function soilConsHelper(cons: string, bs5930: string): Constituent {
     let secondaryConstituent: SecondaryConstituents;
     switch (cons) {
@@ -178,25 +206,37 @@ function soilConsHelper(cons: string, bs5930: string): Constituent {
         default:
             throw new Error("Invalid constituent");
     }
-    const amount = amountHelper(bs5930, cons);
+    const amount = amountHelper(bs5930, cons) ?? undefined;
     return { Constituent: secondaryConstituent, Amount: amount };
 }
 
-function amountHelper(bs5930: string, cons: string): AmountDefine | undefined {
+/**
+ * Determines the amount of a secondary constituent in a soil description string.
+ * @param bs5930 - The soil description string.
+ * @param cons - The secondary constituent description string.
+ * @returns An AmountDefine enum value or null.
+ */
+function amountHelper(bs5930: string, cons: string): AmountDefine | null {
     const vals = [`very ${cons}`, `slightly ${cons}`, cons];
     const match = findFirstMatch(bs5930, vals);
     if (match === null) {
-        return undefined;
+        return null;
     }
     if (match.includes("very")) {
         return AmountDefine.VERY;
     } else if (match.includes("slightly")) {
         return AmountDefine.SLIGHTLY;
     } else {
-        return undefined;
+        return null;
     }
 }
 
+/**
+ * Finds the first match of a pattern in a string.
+ * @param item - The string to search.
+ * @param patterns - The patterns to search for.
+ * @returns The first matching pattern or null.
+ */
 function findFirstMatch(item: string, patterns: string[]): string | null {
     for (const pattern of patterns) {
         if (item.toLowerCase().includes(pattern.toLowerCase())) {
@@ -206,6 +246,11 @@ function findFirstMatch(item: string, patterns: string[]): string | null {
     return null;
 }
 
+/**
+ * Determines the primary soil types in a soil description string.
+ * @param bs5930Description - The soil description string.
+ * @returns An array of SoilRockTypes enum values.
+ */
 function GetSoilType(bs5930Description: string): SoilRockTypes[] {
     const matches = soilRockTypes.filter(soilType => {
         const regex = new RegExp(`\\b${soilType}\\b`, 'i');
@@ -217,6 +262,11 @@ function GetSoilType(bs5930Description: string): SoilRockTypes[] {
     return matches.map(match => soildescHelper(match));
 }
 
+/**
+ * Determines the secondary soil types in a soil description string.
+ * @param bs5930Description - The soil description string.
+ * @returns An array of Constituent objects.
+ */
 function getSecondarySoilType(bs5930Description: string): Constituent[] {
     const matches = soilCons.filter(consType => bs5930Description.toUpperCase().includes(consType.toUpperCase()));
     if (matches.length === 0) {
@@ -225,6 +275,11 @@ function getSecondarySoilType(bs5930Description: string): Constituent[] {
     return matches.map(match => soilConsHelper(match, bs5930Description));
 }
 
+/**
+ * Maps a soil type description string to a SoilRockTypes enum value.
+ * @param cons - The soil type description string.
+ * @returns A SoilRockTypes enum value.
+ */
 function soildescHelper(cons: string): SoilRockTypes {
     switch (cons) {
         case "clay":
@@ -244,6 +299,11 @@ function soildescHelper(cons: string): SoilRockTypes {
     }
 }
 
+/**
+ * Maps soil types to their corresponding behaviours.
+ * @param cons - An array of SoilRockTypes enum values.
+ * @returns An array of SoilBehaviour enum values.
+ */
 function mapSoilBehavHelper(cons: SoilRockTypes[]): SoilBehaviour[] {
     return cons.map(con => {
         switch (con) {
@@ -261,6 +321,11 @@ function mapSoilBehavHelper(cons: SoilRockTypes[]): SoilBehaviour[] {
     });
 }
 
+/**
+ * Maps a cohesive strength description to a range of cohesion values.
+ * @param desc - The cohesive strength description.
+ * @returns A tuple containing the lower and upper bounds of the cohesion values.
+ */
 function soilDescriptionToCu(desc: CohesiveStrength): [number, number] {
     switch (desc) {
         case CohesiveStrength.VERY_SOFT:
